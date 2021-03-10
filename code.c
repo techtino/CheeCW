@@ -5,75 +5,75 @@
 #include <time.h>
 #include <Python.h>
 
+
 //Global variable declaration
 int fd[2];
 int pid;
 char *file = "status.txt";
-void sig_handler(int signo);
+int int_caught = 0;
+
+void child_sig_handler(int signo);
+void parent_sig_handler(int signo);
 void create_status_file(int pid);
-sigset_t sigset;
 
 int main() {
-        int fd[2];
-        int pid;
-        char *file = "status.txt";
+        struct sigaction sh;
 
-        //Creating structure of current system time
-        time_t T= time(NULL);
-        struct tm tm = *localtime(&T);
-        
-        //signal handler setup for each required signal
-        signal(SIGINT, sig_handler);
-        signal(SIGTSTP, sig_handler);
+        //Defining handler for signals with sigaction
+        sh.sa_handler = child_sig_handler;
+        sigemptyset (&sh.sa_mask);
+        sh.sa_flags = 0;
+        sigaction (SIGINT, &sh, NULL);
+        sigaction (SIGTSTP, &sh, NULL);
 
         //Ensuring the pipe is created successfully
         if (pipe(fd) < 0)
                 printf("Pipe Error");
 
-
         if((pid = fork()) < 0){
                 printf("Fork error\n");
         }
+
         //Parent code
         else if (pid > 0){
                 //read end of pipe bound to stdin file descriptor ID
                 dup2(fd[0], fileno(stdin));
                 
                 create_status_file(pid);
-                
-                //waits for child to complete
-                wait();
-
-                
-
-
+                waitpid(pid);
         }
+
         //Child code
         else{
                 //stdout bound to write end of pipe
                 dup2(fd[1], fileno(stdout));
+                while(int_caught == 0){
+                        
 
 
-                printf("Child\n");
+
+
+                }
         }
 }
 
-void sig_handler(int signo){
-        //Run different function based on signal received, switch case more efficient than if
-        switch (signo){
+void child_sig_handler (int signo){
+        switch(signo){
                 case 2:
-                        printf("INT");
+                        int_caught = 1;
                         break;
                 case 20:
                         printf("STOP");
                         break;
-                case 17:
-                        printf("CHILD");
-                        break;
                 default:
                         printf("Unknown");
         }
+
 }
+void parent_sig_handler(int signo){
+        printf("hello");
+}
+
 
 void create_status_file(int pid){
         //Creating structure of current system time
