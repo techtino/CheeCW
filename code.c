@@ -9,48 +9,48 @@
 //Global variable declaration
 int fd[2];
 int pid;
-char *file = "status.txt";
 int int_caught = 0;
-
+int nbytes = 0;
+char readbuffer[80];
+char *file = "status.txt";
 void child_sig_handler(int signo);
 void parent_sig_handler(int signo);
 void create_status_file(int pid);
+void generateNumber();
 
 int main() {
-        struct sigaction sh;
-
-        //Defining handler for signals with sigaction
-        sh.sa_handler = child_sig_handler;
-        sigemptyset (&sh.sa_mask);
-        sh.sa_flags = 0;
-        sigaction (SIGINT, &sh, NULL);
-        sigaction (SIGTSTP, &sh, NULL);
-
         //Ensuring the pipe is created successfully
         if (pipe(fd) < 0)
                 printf("Pipe Error");
 
+        signal(SIGINT,child_sig_handler);
+        signal(SIGTSTP,child_sig_handler);
         if((pid = fork()) < 0){
                 printf("Fork error\n");
         }
 
         //Parent code
         else if (pid > 0){
+
                 //read end of pipe bound to stdin file descriptor ID
                 dup2(fd[0], fileno(stdin));
-                
                 create_status_file(pid);
+
                 waitpid(pid);
+                nbytes = read(fd[0], readbuffer, sizeof(readbuffer));
+
+
+
+
+
+
         }
 
         //Child code
         else{
                 //stdout bound to write end of pipe
                 dup2(fd[1], fileno(stdout));
-                while(int_caught == 0){
-                        
-
-
+                while(int_caught != 1){
 
 
                 }
@@ -62,9 +62,11 @@ void child_sig_handler (int signo){
                 case 2:
                         int_caught = 1;
                         break;
+                        
                 case 20:
-                        printf("STOP");
+                        generateNumber();
                         break;
+                        
                 default:
                         printf("Unknown");
         }
@@ -84,7 +86,7 @@ void create_status_file(int pid){
         int statusDescriptor = open(file, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);                
                 
         //stdout file descriptor contents are duped to status file desciptor
-        dup2(statusDescriptor, fileno(stdout));
+        //dup2(statusDescriptor, fileno(stdout));
 
         //time is printed to file
         printf("Program ran at: %02d:%02d:%0.2d\n",tm.tm_hour,tm.tm_min,tm.tm_sec);
@@ -93,4 +95,11 @@ void create_status_file(int pid){
         pid_t parentPID = getpid();
         printf("Child PID is %d, the parent PID is %d", pid, parentPID);       
         close(statusDescriptor);
+}
+
+void generateNumber(){
+        int lower = 10, upper = 50;
+        srand(time(0));
+        int num = (rand() % (upper - lower + 1)) + lower;
+        printf("%d", num);
 }
