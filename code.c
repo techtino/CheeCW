@@ -6,13 +6,14 @@
 #include <Python.h>
 
 //Global variable declaration
-int fd[2], pid, int_caught, tstp_caught, child_complete;
+int fd[2], int_caught, tstp_caught, child_complete;
 void child_sig_handler(int signo);
 void parent_sig_handler(int signo);
 void create_status_file(int pid);
 void generateNumber();
 
 int main() {
+        int pid;
         //Ensuring the pipe is created successfully
         if (pipe(fd) < 0)
                 printf("Pipe Error");
@@ -78,9 +79,8 @@ void child_sig_handler (int signo){
 }
 
 void parent_sig_handler(int signo){
-        child_complete = 1;
+        child_complete = 1; // inform program that child has finished
 }
-
 
 void create_status_file(int pid){
         //Creating structure of current system time
