@@ -49,11 +49,6 @@ int main() {
                         strcpy(array[i], line); //copies string into array memory location
                         i++;
                 } 
-
-
-
-
-
                 close(fd[0]); //close read end of pipe
         }
 
@@ -103,7 +98,7 @@ void create_status_file(int pid){
         // Make use of stat command to get information about inode
         struct stat file_stat;
         int inode;
-        fstat (statusDescriptor, &file_stat);  
+        fstat (statusDescriptor, &file_stat);
 
         printf("Program ran at: %02d:%02d:%0.2d\n",tm.tm_hour,tm.tm_min,tm.tm_sec); //time is printed to file
         printf("Child PID is %d, the parent PID is %d\n", pid, parentPID);
