@@ -1,2 +1,0 @@
-Program ran at: 21:56:14
-Child PID is 4118, the parent PID is 4117
