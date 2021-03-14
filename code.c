@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <time.h>
 #include <Python.h>
+#include <sys/stat.h>
 
 //Global variable declaration
 int fd[2], int_caught, tstp_caught, child_complete;
@@ -48,6 +49,11 @@ int main() {
                         strcpy(array[i], line); //copies string into array memory location
                         i++;
                 } 
+
+
+
+
+
                 close(fd[0]); //close read end of pipe
         }
 
@@ -83,16 +89,25 @@ void parent_sig_handler(int signo){
 }
 
 void create_status_file(int pid){
+        char *file = "status.txt";
+        
         //Creating structure of current system time
         time_t T= time(NULL);
         struct tm tm = *localtime(&T);
-        char *file = "status.txt";
+
+        pid_t parentPID = getpid(); // Gets parent PID
+        
         int statusDescriptor = open(file, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR); //status file opened for write as file descriptor fd
         dup2(statusDescriptor, fileno(stdout)); //stdout file descriptor contents are duped to status file desciptor
+       
+        // Make use of stat command to get information about inode
+        struct stat file_stat;
+        int inode;
+        fstat (statusDescriptor, &file_stat);  
+
         printf("Program ran at: %02d:%02d:%0.2d\n",tm.tm_hour,tm.tm_min,tm.tm_sec); //time is printed to file
-        //parent and child PIDs written to file        
-        pid_t parentPID = getpid();
-        printf("Child PID is %d, the parent PID is %d", pid, parentPID);       
+        printf("Child PID is %d, the parent PID is %d\n", pid, parentPID);
+        printf("Inode Number of file: %d, User ID of owner: %d, Group ID: %d, Date Created (unix timestamp): %d", file_stat.st_ino, file_stat.st_uid, file_stat.st_gid, file_stat.st_ctim);
         close(statusDescriptor);
 }
 
