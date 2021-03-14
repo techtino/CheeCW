@@ -69,15 +69,12 @@ void child_sig_handler (int signo){
                 case 2:
                         int_caught = 1; //Sets variable to inform that ctrl+c was pressed
                         break;
-                        
                 case 20:
                         tstp_caught = 1; //Inform program that ctrl-z was pressed       
                         break;
-                        
                 default:
                         printf("Unknown");
         }
-
 }
 
 void parent_sig_handler(int signo){
@@ -89,17 +86,10 @@ void create_status_file(int pid){
         //Creating structure of current system time
         time_t T= time(NULL);
         struct tm tm = *localtime(&T);
-
         char *file = "status.txt";
-        //status file opened for write as file descriptor fd
-        int statusDescriptor = open(file, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);                
-                
-        //stdout file descriptor contents are duped to status file desciptor
-        dup2(statusDescriptor, fileno(stdout));
-
-        //time is printed to file
-        printf("Program ran at: %02d:%02d:%0.2d\n",tm.tm_hour,tm.tm_min,tm.tm_sec);
-
+        int statusDescriptor = open(file, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR); //status file opened for write as file descriptor fd
+        dup2(statusDescriptor, fileno(stdout)); //stdout file descriptor contents are duped to status file desciptor
+        printf("Program ran at: %02d:%02d:%0.2d\n",tm.tm_hour,tm.tm_min,tm.tm_sec); //time is printed to file
         //parent and child PIDs written to file        
         pid_t parentPID = getpid();
         printf("Child PID is %d, the parent PID is %d", pid, parentPID);       
