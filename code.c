@@ -5,14 +5,8 @@
 #include <time.h>
 #include <Python.h>
 
-
 //Global variable declaration
-int fd[2];
-int pid;
-int int_caught = 0;
-int nbytes = 0;
-char readbuffer[80];
-char *file = "status.txt";
+int fd[2], pid, int_caught, tstp_caught, child_complete;
 void child_sig_handler(int signo);
 void parent_sig_handler(int signo);
 void create_status_file(int pid);
@@ -23,36 +17,49 @@ int main() {
         if (pipe(fd) < 0)
                 printf("Pipe Error");
 
+        //Signal handlers per signal are set
         signal(SIGINT,child_sig_handler);
         signal(SIGTSTP,child_sig_handler);
+        signal(SIGCHLD, parent_sig_handler);
+
+        //Ensure fork is successful
         if((pid = fork()) < 0){
                 printf("Fork error\n");
         }
 
         //Parent code
         else if (pid > 0){
-
-                //read end of pipe bound to stdin file descriptor ID
-                dup2(fd[0], fileno(stdin));
+                close(fd[1]); //close write end of pipe
+                dup2(fd[0], fileno(stdin)); //read end of pipe bound to stdin
                 create_status_file(pid);
+                while(child_complete != 1){} //halts program whilst child not complete
 
-                waitpid(pid);
-                nbytes = read(fd[0], readbuffer, sizeof(readbuffer));
-
-
-
-
-
-
+                //Variables for reading line by line
+                char *line;
+                size_t bufsize = 2;
+                int i=0;
+                char **array;
+                array = malloc(bufsize * sizeof(char*)); //allocates required memory to array pointer
+                
+                //While line isnt empty, copy the number into array
+                while ((getline(&line, &bufsize, stdin)) != -1) {
+                        array[i] = malloc(strlen(line) + 1); //allocates extra memory for new line
+                        strcpy(array[i], line); //copies string into array memory location
+                        i++;
+                } 
+                close(fd[0]); //close read end of pipe
         }
 
         //Child code
         else{
-                //stdout bound to write end of pipe
-                dup2(fd[1], fileno(stdout));
-                while(int_caught != 1){
-
-
+                close(fd[0]); //close read end of pipe
+                dup2(fd[1], fileno(stdout)); //stdout bound to write end of pipe
+                while(int_caught != 1){ //Code runs whilst CTRL-C has not been pressed
+                        //Check for CTRL-Z to be pressed and generates number
+                        if(tstp_caught == 1){
+                                tstp_caught = 0;
+                                generateNumber();
+                        }
                 }
         }
 }
@@ -60,11 +67,11 @@ int main() {
 void child_sig_handler (int signo){
         switch(signo){
                 case 2:
-                        int_caught = 1;
+                        int_caught = 1; //Sets variable to inform that ctrl+c was pressed
                         break;
                         
                 case 20:
-                        generateNumber();
+                        tstp_caught = 1; //Inform program that ctrl-z was pressed       
                         break;
                         
                 default:
@@ -72,8 +79,9 @@ void child_sig_handler (int signo){
         }
 
 }
+
 void parent_sig_handler(int signo){
-        printf("hello");
+        child_complete = 1;
 }
 
 
@@ -81,12 +89,13 @@ void create_status_file(int pid){
         //Creating structure of current system time
         time_t T= time(NULL);
         struct tm tm = *localtime(&T);
-        
+
+        char *file = "status.txt";
         //status file opened for write as file descriptor fd
         int statusDescriptor = open(file, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);                
                 
         //stdout file descriptor contents are duped to status file desciptor
-        //dup2(statusDescriptor, fileno(stdout));
+        dup2(statusDescriptor, fileno(stdout));
 
         //time is printed to file
         printf("Program ran at: %02d:%02d:%0.2d\n",tm.tm_hour,tm.tm_min,tm.tm_sec);
@@ -98,8 +107,7 @@ void create_status_file(int pid){
 }
 
 void generateNumber(){
-        int lower = 10, upper = 50;
         srand(time(0));
-        int num = (rand() % (upper - lower + 1)) + lower;
-        printf("%d", num);
+        int num = (rand() % (50 - 10 + 1)) + 10;
+        printf("%d\n", num);
 }
