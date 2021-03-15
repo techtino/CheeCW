@@ -16,7 +16,7 @@ struct tm pt;
 void child_sig_handler(int signo);
 void parent_sig_handler(int signo);
 void create_status_file(int pid);
-void store_to_database(char numbers[]);
+void python_database_driver(char numbers[]);
 void generateNumber();
 
 int main() {
@@ -53,7 +53,7 @@ int main() {
                 char numbers[200];
                 scanf("%s",numbers);
 
-                store_to_database(numbers);
+                python_database_driver(numbers);
                 create_status_file(pid);
                 close(fd[0]); //close read end of pipe
         }
