@@ -7,10 +7,11 @@
 #include <sys/stat.h>
 
 //Global variable declaration
-int fd[2], int_caught, tstp_caught, child_complete;
+int fd[2], int_caught, tstp_caught, child_complete, saved_stdout;
 void child_sig_handler(int signo);
 void parent_sig_handler(int signo);
 void create_status_file(int pid);
+void store_to_database(char **numArray);
 void generateNumber();
 
 int main() {
@@ -31,29 +32,34 @@ int main() {
 
         //Parent code
         else if (pid > 0){
+                saved_stdout = dup(1); //save STDOUT to temp FD
+                create_status_file(pid);
+                dup2(saved_stdout, 1); //reset STDOUT to regular output
+                close(saved_stdout);
                 close(fd[1]); //close write end of pipe
                 dup2(fd[0], fileno(stdin)); //read end of pipe bound to stdin
-                create_status_file(pid);
-                while(child_complete != 1){} //halts program whilst child not complete
+                
+                while(child_complete != 1){} //halts parent whilst child not complete
 
                 //Variables for reading line by line
                 char *line;
-                size_t bufsize = 2;
+                size_t bufsize = 50;
                 int i=0;
-                char **array;
-                array = malloc(bufsize * sizeof(char*)); //allocates required memory to array pointer
+                char **numArray;
+                numArray = malloc(bufsize * sizeof(char*)); //allocates required memory to array pointer
                 
-                //While line isnt empty, copy the number into array
+                //While line isn't empty, copy the number into array
                 while ((getline(&line, &bufsize, stdin)) != -1) {
-                        array[i] = malloc(strlen(line) + 1); //allocates extra memory for new line
-                        strcpy(array[i], line); //copies string into array memory location
+                        numArray[i] = malloc(strlen(line) + 1); //allocates extra memory for new line
+                        strcpy(numArray[i], line); //copies string into array memory location
                         i++;
-                } 
+                }
+                store_to_database(numArray);
                 close(fd[0]); //close read end of pipe
         }
 
         //Child code
-        else{
+        else if (pid == 0){
                 close(fd[0]); //close read end of pipe
                 dup2(fd[1], fileno(stdout)); //stdout bound to write end of pipe
                 while(int_caught != 1){ //Code runs whilst CTRL-C has not been pressed
@@ -92,7 +98,7 @@ void create_status_file(int pid){
 
         pid_t parentPID = getpid(); // Gets parent PID
         
-        int statusDescriptor = open(file, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR); //status file opened for write as file descriptor fd
+        int statusDescriptor = open(file, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR); //status file opened for write as file descriptor fd
         dup2(statusDescriptor, fileno(stdout)); //stdout file descriptor contents are duped to status file desciptor
        
         // Make use of stat command to get information about inode
@@ -103,6 +109,8 @@ void create_status_file(int pid){
         printf("Program ran at: %02d:%02d:%0.2d\n",tm.tm_hour,tm.tm_min,tm.tm_sec); //time is printed to file
         printf("Child PID is %d, the parent PID is %d\n", pid, parentPID);
         printf("Inode Number of file: %d, User ID of owner: %d, Group ID: %d, Date Created (unix timestamp): %d", file_stat.st_ino, file_stat.st_uid, file_stat.st_gid, file_stat.st_ctim);
+        fflush(stdout);
+        fsync(statusDescriptor);
         close(statusDescriptor);
 }
 
@@ -110,4 +118,10 @@ void generateNumber(){
         srand(time(0));
         int num = (rand() % (50 - 10 + 1)) + 10;
         printf("%d\n", num);
+}
+
+void store_to_database(char **numArray){
+        Py_Initialize();
+        PyRun_SimpleString("print('hello world')");
+        Py_Finalize();
 }
