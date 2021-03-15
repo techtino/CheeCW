@@ -7,7 +7,7 @@
 #include <sys/stat.h>
 
 //Global variable declaration
-int fd[2], int_caught, tstp_caught, child_complete, saved_stdout;
+int fd[2], int_caught, tstp_caught, child_complete;
 
 struct tm st;
 struct tm ct;
@@ -127,28 +127,35 @@ void generateNumber(){
         printf("%d,", num);
 }
 
-void store_to_database(char numbers[]){
-        remove("example.db");
-        Py_Initialize();
-        char PyCode[800];
+void python_database_driver(char numbers[]){
+        
+        remove("numbers.db"); //Delete/clear database 
 
-        snprintf(PyCode,sizeof PyCode,
+        Py_Initialize(); //Initialise Python connection
+
+        //Python Code is stored in character array to run
+        char PyCode[800];
+        snprintf(PyCode,sizeof PyCode, //snprintf to store numbers array into python command string
+
         "import sqlite3"
-        "\nnumberArr='%s'"
-        "\nnumberArr= numberArr[:-1]" //remove stray comma from array
-        "\nnumberList = list(map(int, numberArr.split(',')))"
-        "\ncon = sqlite3.connect('example.db')"
+        "\nnumberArr='%s'" //Number array is set to C variable
+        "\nnumberArr= numberArr[:-1]" //Remove stray comma from array
+        "\nnumberList = list(map(int, numberArr.split(',')))" //Split the characters and produce integer list
+        "\ncon = sqlite3.connect('numbers.db')"
         "\ncur = con.cursor()"
         "\ncur.execute('CREATE TABLE Numbers (id integer primary key, number integer)')"
-        "\nprint(numberList)"
+
+        //Loop through list and store each number into sql table
         "\nfor number in numberList:"
         "\n\tcur.execute('INSERT INTO Numbers (number) VALUES (?)', (number,))"
+
+        //Select all numbers from table, fetch them all and print row by row
         "\ncur.execute('SELECT number FROM Numbers')"
         "\nrows = cur.fetchall()"
         "\nfor row in rows:"
         "\n\tprint(row[0], end =' ')"
         "\ncon.commit()"
-        , numbers);
+        , numbers); // String to place into python code
 
         PyRun_SimpleString(PyCode);
         Py_Finalize();
