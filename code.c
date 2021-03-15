@@ -111,6 +111,7 @@ void create_status_file(int pid){
         printf("Inode Number of file: %d, User ID of owner: %d, Group ID: %d, Date Created (unix timestamp): %d", file_stat.st_ino, file_stat.st_uid, file_stat.st_gid, file_stat.st_ctim);
         
         fflush(stdout);
+        fclose(stdout);
         fsync(statusDescriptor);
         close(statusDescriptor);
 }
@@ -127,12 +128,28 @@ void generateNumber(){
 }
 
 void store_to_database(char numbers[]){
+        remove("example.db");
         Py_Initialize();
+        char PyCode[800];
 
+        snprintf(PyCode,sizeof PyCode,
+        "import sqlite3"
+        "\nnumberArr='%s'"
+        "\nnumberArr= numberArr[:-1]" //remove stray comma from array
+        "\nnumberList = list(map(int, numberArr.split(',')))"
+        "\ncon = sqlite3.connect('example.db')"
+        "\ncur = con.cursor()"
+        "\ncur.execute('CREATE TABLE Numbers (id integer primary key, number integer)')"
+        "\nprint(numberList)"
+        "\nfor number in numberList:"
+        "\n\tcur.execute('INSERT INTO Numbers (number) VALUES (?)', (number,))"
+        "\ncur.execute('SELECT number FROM Numbers')"
+        "\nrows = cur.fetchall()"
+        "\nfor row in rows:"
+        "\n\tprint(row[0], end =' ')"
+        "\ncon.commit()"
+        , numbers);
 
-        PyObject* numberStr = Py_BuildValue("c", numbers);
-
-
-
+        PyRun_SimpleString(PyCode);
         Py_Finalize();
 }
