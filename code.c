@@ -128,35 +128,38 @@ void generateNumber(){
 }
 
 void python_database_driver(char numbers[]){
-        
-        remove("numbers.db"); //Delete/clear database 
-
         Py_Initialize(); //Initialise Python connection
 
-        //Python Code is stored in character array to run
+        //Python Code is stored in character array
         char PyCode[800];
-        snprintf(PyCode,sizeof PyCode, //snprintf to store numbers array into python command string
+        snprintf(PyCode,sizeof PyCode, //snprintf to insert numbers to python code
 
-        "import sqlite3"
+        "import mariadb" //import mariadb library, community fork of MySQL
         "\nnumberArr='%s'" //Number array is set to C variable
         "\nnumberArr= numberArr[:-1]" //Remove stray comma from array
         "\nnumberList = list(map(int, numberArr.split(',')))" //Split the characters and produce integer list
-        "\ncon = sqlite3.connect('numbers.db')"
+        "\ncon = mariadb.connect(" //Connect to database server on machine
+        "\n host='localhost',"
+        "\n user='admin',"
+        "\n password='mysqldbpass',"
+        "\n database='NumberDB'"
+        "\n)"
         "\ncur = con.cursor()"
-        "\ncur.execute('CREATE TABLE Numbers (id integer primary key, number integer)')"
+        "\ncur.execute('DROP TABLE IF EXISTS Numbers')" //Delete existing table (Clear contents)
+        "\ncur.execute('CREATE TABLE Numbers (id INT AUTO_INCREMENT PRIMARY KEY, number INT)')" //Create new table to store numbers
 
-        //Loop through list and store each number into sql table
+        //Loop through list and insert each number into sql table
         "\nfor number in numberList:"
         "\n\tcur.execute('INSERT INTO Numbers (number) VALUES (?)', (number,))"
 
         //Select all numbers from table, fetch them all and print row by row
         "\ncur.execute('SELECT number FROM Numbers')"
         "\nrows = cur.fetchall()"
+        "\nprint('')"
         "\nfor row in rows:"
         "\n\tprint(row[0], end =' ')"
-        "\ncon.commit()"
-        , numbers); // String to place into python code
+        , numbers); // Pass number string into PyCode
 
-        PyRun_SimpleString(PyCode);
+        PyRun_SimpleString(PyCode); //Run code
         Py_Finalize();
 }
