@@ -32,6 +32,7 @@ int main() {
         // Start time of program is stored
         T= time(NULL);
         st = *localtime(&T);
+
         //Ensuring the pipe is created successfully
         if (pipe(fd) < 0){
                 printf("Pipe Error");
@@ -50,10 +51,12 @@ int main() {
 
         //Parent code
         else if (pid > 0){
+
+                // Child specific signals are ignored by parent
                 signal(SIGINT,SIG_IGN);
                 signal(SIGTSTP,SIG_IGN);
 
-                close(fd[1]); //close write end of pipe
+                close(fd[1]); //close write end of pipe, no writing required in parent
                 dup_success = dup2(fd[0], 0); //read end of pipe bound to stdin
                 
                 if (dup_success == -1){
@@ -71,13 +74,13 @@ int main() {
 
                 python_database_driver(numbers);
                 create_status_file(pid);
-                close(fd[0]); //close read end of pipe
+                close(fd[0]); //close read end of pipe, program finished, cleanup
         }
 
         //Child code
         else if (pid == 0){
                 signal(SIGCHLD,SIG_IGN);
-                close(fd[0]); //close read end of pipe
+                close(fd[0]); //close read end of pipe, no reading of pipe is required
                 dup_success = dup2(fd[1], fileno(stdout)); //stdout bound to write end of pipe
                 
                 if (dup_success == -1){
@@ -92,6 +95,7 @@ int main() {
                                 generateNumber();
                         }
                 }
+                close(fd[1]);  //close write end of pipe, no more writing is done to pipe in child
         }
 }
 
